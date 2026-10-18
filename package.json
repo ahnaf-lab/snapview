@@ -1,0 +1,13 @@
+{
+  "name": "snapview",
+  "version": "0.1.0",
+  "description": "Diff committed and pending snapshot test files and review them side by side.",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}
