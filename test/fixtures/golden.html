@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>snapview diff</title>
+<style>body{font-family:monospace;margin:1.5rem;}.summary{color:#555;}table.side-by-side{border-collapse:collapse;width:100%;margin-bottom:1.5rem;}table.side-by-side td,table.side-by-side th{border:1px solid #ddd;padding:2px 6px;text-align:left;vertical-align:top;}td.lineno{color:#999;width:3em;text-align:right;user-select:none;}td.code{white-space:pre;}tr.add td.code{background:#e6ffed;}tr.remove td.code{background:#ffeef0;}section.file h2{font-size:1rem;}span.status{text-transform:uppercase;font-size:0.75rem;color:#888;}</style>
+</head>
+<body>
+<h1>snapview diff</h1>
+<p class="summary">1 added, 1 removed, 1 changed, 2 unchanged</p>
+<section class="file added" data-file="new.snap">
+<h2><span class="status">added</span> new.snap</h2>
+<table class="side-by-side">
+<thead><tr><th colspan="2">before</th><th colspan="2">after</th></tr></thead>
+<tbody>
+<tr class="line add"><td class="lineno"></td><td class="code"></td><td class="lineno">1</td><td class="code">exports.value = &quot;fresh&quot;;</td></tr>
+</tbody>
+</table>
+</section>
+<section class="file removed" data-file="old.snap">
+<h2><span class="status">removed</span> old.snap</h2>
+<table class="side-by-side">
+<thead><tr><th colspan="2">before</th><th colspan="2">after</th></tr></thead>
+<tbody>
+<tr class="line remove"><td class="lineno">1</td><td class="code">exports.value = &quot;stale&quot;;</td><td class="lineno"></td><td class="code"></td></tr>
+</tbody>
+</table>
+</section>
+<section class="file changed" data-file="button.snap">
+<h2><span class="status">changed</span> button.snap</h2>
+<table class="side-by-side">
+<thead><tr><th colspan="2">before</th><th colspan="2">after</th></tr></thead>
+<tbody>
+<tr class="line remove"><td class="lineno">1</td><td class="code">&lt;button&gt;Save&lt;/button&gt;</td><td class="lineno"></td><td class="code"></td></tr>
+<tr class="line add"><td class="lineno"></td><td class="code"></td><td class="lineno">1</td><td class="code">&lt;button&gt;Save &amp; Close&lt;/button&gt;</td></tr>
+<tr class="line equal"><td class="lineno">2</td><td class="code">&lt;p&gt;v1&lt;/p&gt;</td><td class="lineno">2</td><td class="code">&lt;p&gt;v1&lt;/p&gt;</td></tr>
+</tbody>
+</table>
+</section>
+<section class="unchanged">
+<h2>unchanged</h2>
+<ul>
+<li>header.snap</li>
+<li>footer.snap</li>
+</ul>
+</section>
+</body>
+</html>
