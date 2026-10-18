@@ -78,10 +78,34 @@ function renderTable(rowsHtml) {
   );
 }
 
-function renderSection(status, file, rowsHtml) {
+/**
+ * Renders the accept/reject controls for a single file as plain HTML
+ * forms (no inline scripts, no fetch/XHR) so the page keeps working with
+ * JavaScript disabled and stays within the "no network calls the README
+ * does not describe" rule: a normal form POST to /accept or /reject is the
+ * only network activity, and both routes are documented in the README.
+ */
+function renderActions(file) {
+  const encodedFile = escapeHtml(file);
+  return (
+    '<div class="actions">\n' +
+    '<form method="post" action="/accept">' +
+    `<input type="hidden" name="file" value="${encodedFile}">` +
+    '<button type="submit" class="accept">Accept</button>' +
+    '</form>\n' +
+    '<form method="post" action="/reject">' +
+    `<input type="hidden" name="file" value="${encodedFile}">` +
+    '<button type="submit" class="reject">Reject</button>' +
+    '</form>\n' +
+    '</div>\n'
+  );
+}
+
+function renderSection(status, file, rowsHtml, actionsHtml = '') {
   return (
     `<section class="file ${status}" data-file="${escapeHtml(file)}">\n` +
     `<h2><span class="status">${status}</span> ${escapeHtml(file)}</h2>\n` +
+    actionsHtml +
     `${renderTable(rowsHtml)}\n` +
     '</section>'
   );
@@ -95,19 +119,41 @@ function renderSection(status, file, rowsHtml) {
  */
 function renderDiffHtml(diff, options = {}) {
   const title = options.title || 'snapview diff';
+  const interactive = Boolean(options.interactive);
 
   const sections = [];
 
   for (const entry of diff.added) {
-    sections.push(renderSection('added', entry.file, renderWholeFileRows(entry.after, 'after')));
+    sections.push(
+      renderSection(
+        'added',
+        entry.file,
+        renderWholeFileRows(entry.after, 'after'),
+        interactive ? renderActions(entry.file) : ''
+      )
+    );
   }
 
   for (const entry of diff.removed) {
-    sections.push(renderSection('removed', entry.file, renderWholeFileRows(entry.before, 'before')));
+    sections.push(
+      renderSection(
+        'removed',
+        entry.file,
+        renderWholeFileRows(entry.before, 'before'),
+        interactive ? renderActions(entry.file) : ''
+      )
+    );
   }
 
   for (const entry of diff.changed) {
-    sections.push(renderSection('changed', entry.file, renderHunkRows(entry.hunks)));
+    sections.push(
+      renderSection(
+        'changed',
+        entry.file,
+        renderHunkRows(entry.hunks),
+        interactive ? renderActions(entry.file) : ''
+      )
+    );
   }
 
   const unchangedList = diff.unchanged
@@ -152,6 +198,10 @@ const STYLE =
   'tr.add td.code{background:#e6ffed;}' +
   'tr.remove td.code{background:#ffeef0;}' +
   'section.file h2{font-size:1rem;}' +
-  'span.status{text-transform:uppercase;font-size:0.75rem;color:#888;}';
+  'span.status{text-transform:uppercase;font-size:0.75rem;color:#888;}' +
+  '.actions{margin:0.25rem 0 0.75rem;display:flex;gap:0.5rem;}' +
+  '.actions form{margin:0;}' +
+  'button.accept{color:#036b26;}' +
+  'button.reject{color:#b00020;}';
 
 module.exports = { renderDiffHtml, escapeHtml };

@@ -82,3 +82,28 @@ test('renderDiffHtml produces no sections for an all-unchanged diff', () => {
   const html = renderDiffHtml(diff);
   assert.ok(!html.includes('class="file'));
 });
+
+test('renderDiffHtml omits accept/reject forms by default', () => {
+  const diff = {
+    added: [{ file: 'new.snap', after: 'x\n' }],
+    removed: [],
+    changed: [],
+    unchanged: [],
+  };
+  const html = renderDiffHtml(diff);
+  assert.ok(!html.includes('<form'));
+});
+
+test('renderDiffHtml adds accept/reject forms per file when interactive is set', () => {
+  const diff = {
+    added: [{ file: 'new.snap', after: 'x\n' }],
+    removed: [],
+    changed: [],
+    unchanged: [],
+  };
+  const html = renderDiffHtml(diff, { interactive: true });
+
+  assert.ok(html.includes('<form method="post" action="/accept">'));
+  assert.ok(html.includes('<form method="post" action="/reject">'));
+  assert.ok(html.includes('<input type="hidden" name="file" value="new.snap">'));
+});
