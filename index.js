@@ -6,6 +6,7 @@ const { lineDiff } = require('./src/lineDiff');
 const { renderDiffHtml } = require('./src/renderHtml');
 const { applyAction, UnknownFileError } = require('./src/applyAction');
 const { createServer } = require('./src/server');
+const { parseArgs, main, CliError } = require('./src/cli');
 
 module.exports = {
   diffSnapshots,
@@ -15,4 +16,7 @@ module.exports = {
   applyAction,
   UnknownFileError,
   createServer,
+  parseArgs,
+  main,
+  CliError,
 };

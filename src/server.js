@@ -41,7 +41,7 @@ function renderPage(committedDir, pendingDir, title) {
   return renderDiffHtml(diff, { title, interactive: true });
 }
 
-function handleAction(action, committedDir, pendingDir, req, res) {
+function handleAction(action, committedDir, pendingDir, req, res, onResolved) {
   readBody(req)
     .then((body) => {
       const file = new URLSearchParams(body).get('file');
@@ -62,6 +62,13 @@ function handleAction(action, committedDir, pendingDir, req, res) {
 
       res.writeHead(303, { Location: '/' });
       res.end();
+
+      if (onResolved) {
+        const diff = diffSnapshots(committedDir, pendingDir);
+        if (diff.added.length === 0 && diff.removed.length === 0 && diff.changed.length === 0) {
+          onResolved();
+        }
+      }
     })
     .catch((err) => {
       sendText(res, 400, `Bad request: ${err.message}`);
@@ -78,9 +85,16 @@ function handleAction(action, committedDir, pendingDir, req, res) {
  * from committedDir/pendingDir on every request, so the page always
  * reflects the current state of the two directories on disk. No request
  * made to this server causes any further network call.
+ *
+ * If `options.onResolved` is given, it is called (with no arguments)
+ * right after an accept/reject request leaves the diff with no added,
+ * removed or changed files left - i.e. every snapshot has been reviewed.
+ * It may be called more than once if further accept/reject calls keep
+ * the diff empty.
  */
 function createServer(committedDir, pendingDir, options = {}) {
   const title = options.title || 'snapview diff';
+  const onResolved = options.onResolved;
 
   return http.createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
@@ -91,12 +105,12 @@ function createServer(committedDir, pendingDir, options = {}) {
     }
 
     if (req.method === 'POST' && url.pathname === '/accept') {
-      handleAction('accept', committedDir, pendingDir, req, res);
+      handleAction('accept', committedDir, pendingDir, req, res, onResolved);
       return;
     }
 
     if (req.method === 'POST' && url.pathname === '/reject') {
-      handleAction('reject', committedDir, pendingDir, req, res);
+      handleAction('reject', committedDir, pendingDir, req, res, onResolved);
       return;
     }
 

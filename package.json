@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "Diff committed and pending snapshot test files and review them side by side.",
   "main": "index.js",
+  "bin": {
+    "snapview": "./bin/cli.js"
+  },
   "scripts": {
     "test": "node --test"
   },

@@ -6,12 +6,10 @@ generated) snapshot files, computes the exact diff between them, and
 serves a local, offline web UI with side-by-side diffs and one-click
 accept/reject buttons that rewrite the files on disk.
 
-This milestone adds the local HTTP server: it serves the diff as HTML
-(reusing the diff model and HTML renderer from earlier milestones) and
-exposes `POST /accept` and `POST /reject` endpoints that patch the
-snapshot directories on disk. The CLI entry point that wires this server
-to command-line arguments lands in a later milestone; for now the server
-and diff/render pieces are used as a library.
+This milestone adds the `snapview` command-line entry point: it wires
+the local server (from the previous milestone) to a directory argument
+and a `--port` option, and shuts itself down once every pending snapshot
+has been accepted or rejected.
 
 ## Install
 
@@ -19,7 +17,44 @@ and diff/render pieces are used as a library.
 npm install
 ```
 
+To use the `snapview` command from anywhere, install it globally or link it:
+
+```sh
+npm link
+```
+
 ## Usage
+
+```sh
+snapview <dir> [--port <port>]
+```
+
+`<dir>` must contain two subdirectories, `committed/` and `pending/`,
+mirroring the same relative file paths (this is the same layout the
+diff model from earlier milestones already works with). `snapview`
+diffs them, prints a local URL, and serves a web UI there with
+accept/reject buttons:
+
+- Accepting a file copies the pending version into `committed/` (or
+  deletes it from `committed/` if pending removed it).
+- Rejecting a file copies the committed version into `pending/` (or
+  deletes it from `pending/` if committed never had it).
+
+Once every file in the diff has been accepted or rejected, the server
+shuts down and the process exits - there is nothing left to review.
+
+```sh
+snapview ./snapshots
+snapview ./snapshots --port 3000   # fixed port instead of the default
+snapview ./snapshots --port 0      # let the OS pick a free port
+snapview --help
+```
+
+If `<dir>/committed` and `<dir>/pending` already match (no added,
+removed or changed files), `snapview` prints a message and exits
+immediately without starting a server.
+
+The pieces above are also usable as a library:
 
 ```js
 const { diffSnapshots, renderDiffHtml, createServer } = require('./index.js');
@@ -78,6 +113,23 @@ built purely from entries returned by `fs.readdirSync`, which never yields
 `.` or `..` segments. Unrecognized `file` values get a `400` response and
 touch nothing on disk. The server makes no outbound network calls of its
 own — it only reads and writes inside the two directories it was given.
+
+`bin/cli.js` is the `snapview` executable named in `package.json`'s
+`bin` field; it just calls `main()` from `src/cli.js` with
+`process.argv` and reports errors on stderr. `src/cli.js` exports:
+
+- `parseArgs(argv)` — turns `['<dir>', '--port', '<n>']`-style arguments
+  into `{ dir, port, help }`, throwing `CliError` for a missing
+  directory or an invalid `--port` value.
+- `main(argv, { log, exit })` — parses args, resolves `<dir>/committed`
+  and `<dir>/pending`, and (unless `--help` was passed or the two
+  directories already match) starts the server bound to
+  `127.0.0.1:<port>` and passes it an `onResolved` callback that closes
+  the server and calls `exit(0)` once an accept/reject leaves no added,
+  removed or changed files. `log` and `exit` default to `console.log`
+  and `process.exit` but can be overridden (this is how the tests in
+  `test/cli.test.js` observe CLI behavior without tearing down the test
+  process itself).
 
 Run the test suite with:
 
