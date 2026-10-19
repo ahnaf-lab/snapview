@@ -112,10 +112,67 @@ function renderSection(status, file, rowsHtml, actionsHtml = '') {
 }
 
 /**
+ * Inline keyboard-shortcut script for the interactive page: `j`/`k` (or the
+ * down/up arrows) move a "current file" highlight between the review
+ * sections, and `a`/`r` submit that section's existing accept/reject form.
+ * It never builds or evaluates markup/strings as code (no eval, no innerHTML
+ * from request data) - it only calls requestSubmit() on forms that are
+ * already present in the document, so it adds no network call beyond the
+ * plain form POSTs to /accept and /reject that the README already documents.
+ */
+const SHORTCUTS_SCRIPT = `
+(function () {
+  var sections = Array.prototype.slice.call(document.querySelectorAll('section.file'));
+  if (!sections.length) return;
+  var current = 0;
+
+  function highlight() {
+    sections.forEach(function (section, index) {
+      section.classList.toggle('current', index === current);
+    });
+    sections[current].scrollIntoView({ block: 'nearest' });
+  }
+
+  function submitAction(action) {
+    var form = sections[current].querySelector('form[action="/' + action + '"]');
+    if (!form) return;
+    if (form.requestSubmit) {
+      form.requestSubmit();
+    } else {
+      form.submit();
+    }
+  }
+
+  document.addEventListener('keydown', function (event) {
+    var target = event.target;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+
+    if (event.key === 'j' || event.key === 'ArrowDown') {
+      current = Math.min(current + 1, sections.length - 1);
+      highlight();
+    } else if (event.key === 'k' || event.key === 'ArrowUp') {
+      current = Math.max(current - 1, 0);
+      highlight();
+    } else if (event.key === 'a') {
+      submitAction('accept');
+    } else if (event.key === 'r') {
+      submitAction('reject');
+    }
+  });
+
+  highlight();
+})();
+`;
+
+/**
  * Renders a full diffSnapshots() result as a single self-contained HTML
  * document with side-by-side before/after columns per file. The output has
- * no external dependencies (inline <style>, no scripts, no network calls)
- * so it can be written to disk and opened directly, or served as-is.
+ * no external dependencies (inline <style>, no network calls) so it can be
+ * written to disk and opened directly, or served as-is. In non-interactive
+ * mode the page has no <script> tag at all. In interactive mode, and only
+ * when there is at least one file left to review, it also gets one inline
+ * <script> (SHORTCUTS_SCRIPT) for keyboard shortcuts; it only calls
+ * requestSubmit() on the accept/reject forms already in the page.
  */
 function renderDiffHtml(diff, options = {}) {
   const title = options.title || 'snapview diff';
@@ -166,9 +223,17 @@ function renderDiffHtml(diff, options = {}) {
     `${diff.changed.length} changed, ${diff.unchanged.length} unchanged` +
     '</p>';
 
+  const remaining = diff.added.length + diff.removed.length + diff.changed.length;
+  const remainingHtml = interactive
+    ? `<p class="remaining">${remaining} remaining</p>\n` +
+      '<p class="shortcuts">shortcuts: j/k move, a accept, r reject</p>\n'
+    : '';
+
   const unchangedSection = diff.unchanged.length
     ? `<section class="unchanged">\n<h2>unchanged</h2>\n<ul>\n${unchangedList}\n</ul>\n</section>`
     : '';
+
+  const scriptTag = interactive && remaining > 0 ? `<script>${SHORTCUTS_SCRIPT}</script>\n` : '';
 
   return (
     '<!doctype html>\n' +
@@ -181,8 +246,10 @@ function renderDiffHtml(diff, options = {}) {
     '<body>\n' +
     `<h1>${escapeHtml(title)}</h1>\n` +
     `${summary}\n` +
+    remainingHtml +
     `${sections.join('\n')}\n` +
     `${unchangedSection}\n` +
+    scriptTag +
     '</body>\n' +
     '</html>\n'
   );
@@ -202,6 +269,9 @@ const STYLE =
   '.actions{margin:0.25rem 0 0.75rem;display:flex;gap:0.5rem;}' +
   '.actions form{margin:0;}' +
   'button.accept{color:#036b26;}' +
-  'button.reject{color:#b00020;}';
+  'button.reject{color:#b00020;}' +
+  '.remaining{font-weight:bold;}' +
+  '.shortcuts{color:#777;font-size:0.85rem;}' +
+  'section.file.current{outline:2px solid #1a73e8;outline-offset:2px;}';
 
 module.exports = { renderDiffHtml, escapeHtml };

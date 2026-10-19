@@ -107,3 +107,39 @@ test('renderDiffHtml adds accept/reject forms per file when interactive is set',
   assert.ok(html.includes('<form method="post" action="/reject">'));
   assert.ok(html.includes('<input type="hidden" name="file" value="new.snap">'));
 });
+
+test('renderDiffHtml shows a remaining counter and keyboard-shortcut script when interactive', () => {
+  const diff = {
+    added: [{ file: 'new.snap', after: 'x\n' }],
+    removed: [{ file: 'old.snap', before: 'y\n' }],
+    changed: [],
+    unchanged: ['same.snap'],
+  };
+  const html = renderDiffHtml(diff, { interactive: true });
+
+  assert.ok(html.includes('<p class="remaining">2 remaining</p>'));
+  assert.ok(html.includes('<script>'));
+  assert.ok(html.includes("document.addEventListener('keydown'"));
+  assert.ok(!html.includes('<script>alert'));
+});
+
+test('renderDiffHtml omits the remaining counter and script outside interactive mode', () => {
+  const diff = {
+    added: [{ file: 'new.snap', after: 'x\n' }],
+    removed: [],
+    changed: [],
+    unchanged: [],
+  };
+  const html = renderDiffHtml(diff);
+
+  assert.ok(!html.includes('class="remaining"'));
+  assert.ok(!html.includes('<script>'));
+});
+
+test('renderDiffHtml omits the counter and script when everything is already resolved', () => {
+  const diff = { added: [], removed: [], changed: [], unchanged: ['same.snap'] };
+  const html = renderDiffHtml(diff, { interactive: true });
+
+  assert.ok(!html.includes('<script>'));
+  assert.ok(html.includes('0 remaining'));
+});

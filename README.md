@@ -6,10 +6,12 @@ generated) snapshot files, computes the exact diff between them, and
 serves a local, offline web UI with side-by-side diffs and one-click
 accept/reject buttons that rewrite the files on disk.
 
-This milestone adds the `snapview` command-line entry point: it wires
-the local server (from the previous milestone) to a directory argument
-and a `--port` option, and shuts itself down once every pending snapshot
-has been accepted or rejected.
+The `snapview` command-line entry point wires the local server to a
+directory argument and a `--port` option, and shuts itself down once
+every pending snapshot has been accepted or rejected. The web UI shows a
+live count of snapshots left to review and supports keyboard shortcuts
+(`j`/`k` to move between files, `a`/`r` to accept/reject the current one)
+so a large diff can be reviewed without reaching for the mouse.
 
 ## Install
 
@@ -39,6 +41,10 @@ accept/reject buttons:
   deletes it from `committed/` if pending removed it).
 - Rejecting a file copies the committed version into `pending/` (or
   deletes it from `pending/` if committed never had it).
+
+A "N remaining" counter above the file list tracks how many files are
+still unresolved, and the keyboard shortcuts described above (`j`/`k`,
+`a`/`r`) work anywhere on the page outside of a text field.
 
 Once every file in the diff has been accepted or rejected, the server
 shuts down and the process exits - there is nothing left to review.
@@ -84,13 +90,27 @@ in-house to keep the dependency count at zero.
 document: one side-by-side before/after table per added, removed or
 changed file, plus a summary line and a list of unchanged files. All
 snapshot content is HTML-escaped before being written into the document,
-the output has no `<script>` tags, and nothing in the renderer makes a
-network call. `test/renderHtml.test.js` golden-tests this output against
-a fixed fixture in `test/fixtures/` so unintended formatting changes are
-caught. Pass `{ interactive: true }` (what `createServer` does internally)
-to also render an Accept/Reject form under each added, removed or changed
-file; these are plain HTML `<form method="post">` elements with no inline
-scripts, so the page works with JavaScript disabled.
+and nothing in the renderer makes a network call. In the default
+(non-interactive) mode the output has no `<script>` tag at all.
+`test/renderHtml.test.js` golden-tests this output against a fixed
+fixture in `test/fixtures/` so unintended formatting changes are caught.
+
+Pass `{ interactive: true }` (what `createServer` does internally) to also
+render, for each added, removed or changed file, a plain HTML
+`<form method="post">` Accept/Reject pair — these work with JavaScript
+disabled, since the only thing they do is a normal form POST to `/accept`
+or `/reject`. When there is at least one file left to review, interactive
+mode also adds:
+
+- A **remaining counter** (`N remaining`) above the file list, recomputed
+  from the current diff on every page load.
+- A **keyboard shortcuts** inline script: `j`/`k` (or the down/up arrow
+  keys) move a highlighted "current file" between the review sections,
+  and `a`/`r` accept or reject whichever file is currently highlighted, by
+  calling `requestSubmit()` on that file's existing Accept/Reject form. The
+  script never evaluates request data as code and submits only the forms
+  already present in the page, so it adds no network call beyond the
+  `/accept` and `/reject` POSTs already documented above.
 
 `createServer(committedDir, pendingDir, options)` builds a local HTTP
 server (call `.listen(port)` on the result to start it) with three routes:
@@ -130,6 +150,14 @@ own — it only reads and writes inside the two directories it was given.
   and `process.exit` but can be overridden (this is how the tests in
   `test/cli.test.js` observe CLI behavior without tearing down the test
   process itself).
+
+`test/e2e.test.js` exercises the whole stack end to end against a
+checked-in fixture repo at `test/fixtures/e2e-repo/` (its own
+`committed/` and `pending/` with an added, a removed and a changed file):
+it copies the fixture to a temp directory, starts the real CLI `main()`
+against it, drives `/accept` and `/reject` over HTTP the same way a
+browser form submission would, and asserts the resulting file contents on
+disk and that the server shuts itself down once every file is resolved.
 
 Run the test suite with:
 
